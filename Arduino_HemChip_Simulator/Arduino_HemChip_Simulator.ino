@@ -38,6 +38,8 @@ void interpret_cmds(void){
       case NEXT_CIRCUIT:
         if(data_index < NUM_CIRCUITS)
          data_index++;
+        else
+          data_index = 0;
         
         break;
       case NEXT_TIME_STEP:
@@ -45,6 +47,8 @@ void interpret_cmds(void){
         data_index = 0;
         break;
     }
+        Serial.print("data_index: ");
+        Serial.println(data_index);
         Serial.println((int)data_chunk[data_index]);
   }
   
@@ -157,7 +161,7 @@ void setup() {
   //pinMode(COM_PIN_0, INPUT_PULLUP);
   pinMode(COM_PIN_1, INPUT_PULLUP);
   pinMode(COM_PIN_2, INPUT_PULLUP);
-  //attachInterrupt(digitalPinToInterrupt(COM_INT_PIN), receive_command, HIGH);
+  attachInterrupt(digitalPinToInterrupt(COM_INT_PIN), receive_command, HIGH);
 
   digitalWrite(LCD_SELECT_PIN, HIGH);
   digitalWrite(SD_SELECT_PIN, LOW);
