@@ -28,6 +28,27 @@ char data_chunk[NUM_CIRCUITS];
 
 int command_buf[CMD_BUFFER_SIZE];
 
+void interpret_cmds(void){
+  File dataFile = SD.open("test.bin");
+  static int data_index = 0;
+  for(int i = 0; i < CMD_BUFFER_SIZE; i++){
+    dataFile.read(data_chunk, sizeof(data_chunk));
+  
+    switch(command_buf[i]){
+      case NEXT_CIRCUIT:
+        if(data_index < NUM_CIRCUITS)
+         data_index++;
+        
+        break;
+      case NEXT_TIME_STEP:
+        dataFile.read(data_chunk, sizeof(data_chunk));
+        data_index = 0;
+        break;
+    }
+        Serial.println((int)data_chunk[data_index]);
+  }
+  
+}
 void zero_cmd_buf(){
     for(int i = 0; i < CMD_BUFFER_SIZE; i++){
       command_buf[i] = 0;
@@ -40,6 +61,7 @@ void print_cmd_buf(){
 }
 
 void receive_command(){
+  noInterrupts();
   zero_cmd_buf();
   int index = 0;
   int command = 0; 
@@ -74,7 +96,8 @@ while(command !=STOP && index < CMD_BUFFER_SIZE ){
   }
   delay(500);
 }
-  print_cmd_buf();
+  interpret_cmds();
+  interrupts();
 }
 
 int writeToDigipots( uint8_t setting)
@@ -149,7 +172,7 @@ void setup() {
   }
   Serial.println("SD card ready");
 
-  File dataFile = SD.open("test.bin");
+  /*File dataFile = SD.open("test.bin");
 
   int i = 0;
   if (dataFile) {
@@ -162,7 +185,10 @@ void setup() {
       for (int iCircuit = 0; iCircuit < NUM_CIRCUITS; iCircuit++) {
         digitalWrite(CH_CIRCUIT_PIN, HIGH);
         unsigned long digipot_start_time = micros();
-        writeToDigipots( data_chunk[i] );
+        if(writeToDigipots( data_chunk[i] )!= 1){
+              Serial.println("FAIL");
+          
+        }
         unsigned long digipot_end_time = micros();
         digitalWrite(CH_CIRCUIT_PIN, LOW);
 
@@ -188,7 +214,7 @@ void setup() {
     Serial.println("File open error!");
   }
 
-  dataFile.close();
+  dataFile.close();*/
 }
 
 void loop() {
