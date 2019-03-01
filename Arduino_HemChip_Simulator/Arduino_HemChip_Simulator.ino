@@ -1,9 +1,10 @@
+#include <WSWire.h> //https://github.com/steamfire/WSWireLib
+
 //https://www.analog.com/media/en/technical-documentation/data-sheets/AD5241_5242.pdf
 
 #include <SPI.h>
 #include <SD.h>
-#include <Wire.h>
-
+  
 #define NUM_CIRCUITS 81
 
 const int SD_SELECT_PIN = 4;
@@ -14,7 +15,7 @@ const int COM_INT_PIN = 2;
 const int COM_PIN_1 = 12;
 const int COM_PIN_2 = 13;
 
-char data_chunk[NUM_CIRCUITS];
+uint8_t data_chunk[NUM_CIRCUITS];
 
 #define DIGIPOTS_ERROR_CODE     2011
 #define DIGIPOTS_ADDRESS        0b101100                //0b101100 This is 44 in decimal. The last bit is reserved for ~WRITE or READ. This is the I2C address of the chip.
@@ -30,26 +31,29 @@ int command_buf[CMD_BUFFER_SIZE];
 
 void interpret_cmds(void){
   File dataFile = SD.open("test.bin");
-  static int data_index = 0;
+  static uint8_t data_index = 0;
+  dataFile.read(data_chunk, sizeof(data_chunk));
   for(int i = 0; i < CMD_BUFFER_SIZE; i++){
-    dataFile.read(data_chunk, sizeof(data_chunk));
-  
+    Serial.print("data_index: ");
+    Serial.println(data_index);
+    Serial.println(data_chunk[data_index]);
+    writeToDigipots(data_chunk[data_index]);
     switch(command_buf[i]){
       case NEXT_CIRCUIT:
         if(data_index < NUM_CIRCUITS)
          data_index++;
-        else
+        else{
           data_index = 0;
-        
+          dataFile.read(data_chunk, sizeof(data_chunk));
+        }
         break;
       case NEXT_TIME_STEP:
         dataFile.read(data_chunk, sizeof(data_chunk));
         data_index = 0;
         break;
     }
-        Serial.print("data_index: ");
-        Serial.println(data_index);
-        Serial.println((int)data_chunk[data_index]);
+    delay(150);
+    
   }
   
 }
@@ -65,30 +69,32 @@ void print_cmd_buf(){
 }
 
 void receive_command(){
-  noInterrupts();
+  //noInterrupts();
   zero_cmd_buf();
   int index = 0;
   int command = 0; 
   Serial.println("HELLO\n");
+  //delay(500);
 
-while(command !=STOP && index < CMD_BUFFER_SIZE ){
+while(command !=STOP  && index < CMD_BUFFER_SIZE ){
   command = 0;
   //command += (digitalRead(COM_PIN_0)*4);
   command += (digitalRead(COM_PIN_1)*2);
   command += (digitalRead(COM_PIN_2)*1);
   Serial.println(command);
+  //delay(500);
 
   switch(command){
       case START:
         Serial.println("START\n");
         break;
       case NEXT_CIRCUIT:
-        Serial.println("NEXT_CIRCUIT\n");
+        //Serial.println("NEXT_CIRCUIT\n");
         command_buf[index] = command;
         index++;
         break;
       case NEXT_TIME_STEP:
-        Serial.println("NEXT_TIME_STEP\n");
+        //Serial.println("NEXT_TIME_STEP\n");
         command_buf[index] = command;
         index++;
         break;
@@ -100,13 +106,16 @@ while(command !=STOP && index < CMD_BUFFER_SIZE ){
   }
   delay(500);
 }
+  //Serial.println("FAIL\n");   
+  //delay(500);
+
   interpret_cmds();
-  interrupts();
+  //interrupts();
 }
 
 int writeToDigipots( uint8_t setting)
     { 
-      Serial.println(setting);
+    Serial.println(setting);
     uint8_t instructionByte; 
  
     
@@ -120,9 +129,9 @@ int writeToDigipots( uint8_t setting)
     Wire.beginTransmission(DIGIPOTS_ADDRESS);     // transmit to device # 47
     Wire.write((uint8_t)instructionByte);         // sends instruction byte
     Wire.write((uint8_t)setting);                 // sends potentiometer value byte
- 
-    Wire.endTransmission();                       // stop transmitting
- 
+    Serial.print("WSWire exit status: ");
+    Serial.println(Wire.endTransmission());// stop transmitting
+    //delay (2000);
    return (1);                                   // success
 }
 
@@ -161,7 +170,7 @@ void setup() {
   //pinMode(COM_PIN_0, INPUT_PULLUP);
   pinMode(COM_PIN_1, INPUT_PULLUP);
   pinMode(COM_PIN_2, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(COM_INT_PIN), receive_command, HIGH);
+  //attachInterrupt(digitalPinToInterrupt(COM_INT_PIN), receive_command, HIGH);
 
   digitalWrite(LCD_SELECT_PIN, HIGH);
   digitalWrite(SD_SELECT_PIN, LOW);
@@ -220,9 +229,9 @@ void setup() {
 
   dataFile.close();*/
 }
-
+  
 void loop() {
-   //receive_command();
+   receive_command();
    delay(200);
   // put your main code here, to run repeatedly:
 
