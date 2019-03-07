@@ -12,8 +12,8 @@ const int LCD_SELECT_PIN = 10;
 const int CH_CIRCUIT_PIN = 7;
 
 const int COM_INT_PIN = 2;
-const int COM_PIN_1 = 12;
-const int COM_PIN_2 = 13;
+const int COM_PIN_1 = 19;
+const int COM_PIN_2 = 18;
 
 uint8_t data_chunk[NUM_CIRCUITS];
 
@@ -21,19 +21,26 @@ uint8_t data_chunk[NUM_CIRCUITS];
 #define DIGIPOTS_ADDRESS        0b101100                //0b101100 This is 44 in decimal. The last bit is reserved for ~WRITE or READ. This is the I2C address of the chip.
 
 #define START 0b100
-#define NEXT_CIRCUIT 0b001
-#define NEXT_TIME_STEP 0b010
-#define STOP 0b011
+#define NEXT_CIRCUIT 0b01
+#define NEXT_TIME_STEP 0b10
+#define STOP 0b11
+#define WAIT 0
 
-#define CMD_BUFFER_SIZE 10
+#define CMD_BUFFER_SIZE 1
+
+bool waiting = false;
 
 int command_buf[CMD_BUFFER_SIZE];
+void stop_waiting(){
+  waiting = false;
+}
 
 void interpret_cmds(void){
   File dataFile = SD.open("test.bin");
   static uint8_t data_index = 0;
   dataFile.read(data_chunk, sizeof(data_chunk));
   for(int i = 0; i < CMD_BUFFER_SIZE; i++){
+  
     Serial.print("data_index: ");
     Serial.println(data_index);
     Serial.println(data_chunk[data_index]);
@@ -75,15 +82,17 @@ void receive_command(){
   int command = 0; 
   Serial.println("HELLO\n");
   //delay(500);
+  while(digitalRead(COM_INT_PIN) != HIGH){
+    ;
+  }
+while(command != STOP && index < CMD_BUFFER_SIZE ){
 
-while(command !=STOP  && index < CMD_BUFFER_SIZE ){
   command = 0;
   //command += (digitalRead(COM_PIN_0)*4);
   command += (digitalRead(COM_PIN_1)*2);
   command += (digitalRead(COM_PIN_2)*1);
   Serial.println(command);
   //delay(500);
-
   switch(command){
       case START:
         Serial.println("START\n");
@@ -101,10 +110,25 @@ while(command !=STOP  && index < CMD_BUFFER_SIZE ){
       case STOP:
         Serial.println("STOP\n");
         break;
+      case WAIT:
+        waiting = true;
+        //attachInterrupt(digitalPinToInterrupt(COM_PIN_1), stop_waiting, CHANGE);
+        //attachInterrupt(digitalPinToInterrupt(COM_PIN_2), stop_waiting, CHANGE);
+        /*while(waiting){
+          Serial.println("waiting...")
+           ;
+           delay(10);
+           if(digitalRead(COM_PIN_1) == HIGH || digitalRead(COM_PIN_2) == HIGH){
+            waiting = false;
+            
+           }
+        }*/
+        //detachInterrupt(digitalPinToInterrupt(COM_PIN_1));
+        //detachInterrupt(digitalPinToInterrupt(COM_PIN_2));
+        break;
       default:
         Serial.println("FAIL\n");   
   }
-  delay(500);
 }
   //Serial.println("FAIL\n");   
   //delay(500);
@@ -169,6 +193,8 @@ void setup() {
   pinMode(CH_CIRCUIT_PIN, OUTPUT);
   //pinMode(COM_PIN_0, INPUT_PULLUP);
   pinMode(COM_PIN_1, INPUT_PULLUP);
+  pinMode(COM_INT_PIN, INPUT_PULLUP);
+
   pinMode(COM_PIN_2, INPUT_PULLUP);
   //attachInterrupt(digitalPinToInterrupt(COM_INT_PIN), receive_command, HIGH);
 
@@ -232,7 +258,7 @@ void setup() {
   
 void loop() {
    receive_command();
-   delay(200);
+   //delay(200);
   // put your main code here, to run repeatedly:
 
 }
