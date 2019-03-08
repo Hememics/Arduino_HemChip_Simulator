@@ -1,5 +1,6 @@
 import sys
 
+# This is from Carl. 
 
 num_circuits = 81
 num_samples = 1500
